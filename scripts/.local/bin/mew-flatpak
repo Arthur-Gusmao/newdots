@@ -1,0 +1,42 @@
+#!/bin/sh
+# Select an installed Flatpak application with mew and launch it.
+set -eu
+
+for command in flatpak mew; do
+    if ! command -v "$command" >/dev/null 2>&1; then
+        printf 'mew-flatpak: comando ausente: %s\n' "$command" >&2
+        exit 1
+    fi
+done
+
+apps=$(mktemp "${TMPDIR:-/tmp}/mew-flatpak.XXXXXX")
+trap 'rm -f "$apps"' EXIT
+trap 'exit 1' HUP INT TERM
+
+flatpak list --app --columns=name:full,application:full,installation:full > "$apps"
+menu=$(awk -F '\t' 'NF >= 3 { print $1 " (" $2 ") [" $3 "]\t" $2 "\t" $3 }' "$apps")
+printf '%s\n' "$menu" > "$apps"
+
+if [ -z "$menu" ]; then
+    printf 'mew-flatpak: nenhum aplicativo Flatpak instalado.\n' >&2
+    exit 0
+fi
+
+selected=$(cut -f1 "$apps" | mew -i -p 'Flatpak' "$@") || exit 0
+[ -n "$selected" ] || exit 0
+
+# Only accept an exact menu entry; typed text is never executed.
+record=$(MEW_FLATPAK_CHOICE="$selected" awk -F '\t' '$1 == ENVIRON["MEW_FLATPAK_CHOICE"] { print $2 "\t" $3; exit }' "$apps")
+[ -n "$record" ] || exit 0
+app_id=$(printf '%s\n' "$record" | cut -f1)
+installation=$(printf '%s\n' "$record" | cut -f2)
+
+case "$installation" in
+    user) set -- --user ;;
+    system) set -- --system ;;
+    *) set -- "--installation=$installation" ;;
+esac
+
+rm -f "$apps"
+trap - EXIT HUP INT TERM
+exec flatpak run "$@" "$app_id"

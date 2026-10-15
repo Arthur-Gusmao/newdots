@@ -1,0 +1,114 @@
+@define-color bg #060a07;
+@define-color fg #e6e1dc;
+/* Paleta de ~/.config/havoc/havoc.cfg (Railcasts dark). */
+@define-color muted #5a647e;
+@define-color red #da4939;
+@define-color green #a5c261;
+@define-color yellow #ffc66d;
+@define-color blue #6d9cbe;
+@define-color magenta #b6b3eb;
+@define-color cyan #519f50;
+@define-color bright #f9f4eb;
+
+* {
+    font-family: "IosevkaTerm Nerd Font", monospace;
+    font-style: normal;
+    font-size: 14px;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: @bg;
+    color: @fg;
+    border-radius: 0;
+}
+
+#battery,
+#custom-user,
+#custom-sep-left2,
+#workspaces,
+#clock,
+#custom-separator,
+#cpu,
+#temperature,
+#custom-window,
+#clock.date {
+    padding: 0 8px;
+    color: @fg;
+}
+
+#custom-logo {
+    font-family: "IosevkaTerm Nerd Font";
+    /* Proporcional ao texto de 14px: aproximadamente 20px. */
+    font-size: 1.4em;
+    font-weight: normal;
+    color: @blue;
+    padding: 0 8px;
+}
+
+
+#custom-sep-left1,
+#custom-sep-left2,
+#custom-separator {
+    color: @muted;
+    padding: 0 4px;
+}
+
+#workspaces button {
+    padding: 0 4px;
+    margin: 2px 2px;
+    color: @fg;
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+
+#workspaces button.active {
+    color: @bg;
+    background-color: @green;
+    border-radius: 0;
+}
+
+#workspaces button:hover {
+    color: @blue;
+    background-color: @bg;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+#workspaces button.urgent {
+    color: @bg;
+    background-color: @red;
+}
+
+#battery {
+    color: @fg;
+    margin-left: -6px;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: @green;
+}
+
+#battery.warning:not(.charging):not(.plugged) {
+    color: @yellow;
+}
+
+#battery.critical:not(.charging):not(.plugged) {
+    color: @red;
+    font-weight: bold;
+}
+
+#clock,
+#cpu,
+#temperature,
+#custom-window,
+#clock.date {
+    color: @fg;
+}
+
+#temperature.critical {
+    color: @red;
+    font-weight: bold;
+}

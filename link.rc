@@ -1,0 +1,84 @@
+#!/usr/bin/env rc
+
+fn fail {
+    echo $* >[1=2]
+    exit error
+}
+
+# Split command output on newlines, preserving spaces in paths.
+ifs='
+'
+if (! test $#* -ge 2)
+    fail 'Usage: rc link.rc install|check|uninstall TARGET [PACKAGE...]'
+action=$1
+if (! ~ $action install check uninstall)
+    fail 'Unknown action:' $action
+repo=`{dirname $0}
+repo=`{cd $repo && pwd -P}
+target=`{cd $2 && pwd -P}
+if (! test $#target -eq 1)
+    fail 'Target directory does not exist'
+shift 2
+packages=$*
+if (~ $#packages 0)
+    packages=`{cd $repo && find . -mindepth 1 -maxdepth 1 -type d ! -name '.*' | cut -c 3- | sort}
+# Build the file list once. Each package mirrors the target directory.
+entries=()
+for (package in $packages) {
+    if (~ $package .* */* -* || ! test -d $repo/$package)
+        fail 'Invalid package:' $package
+    files=`{cd $repo/$package && find . '(' -type f -o -type l ')' -print | cut -c 3- | sort}
+    for (file in $files)
+        entries=($entries $package/$file)
+}
+# Catch overlapping packages before changing any files.
+if (! ~ $#entries 0) {
+    duplicates=`{printf '%s\n' $entries | cut -d / -f 2- | sort | uniq -d}
+    if (! ~ $#duplicates 0)
+        fail 'Packages share paths:' $duplicates
+}
+
+fn checkparents {
+    ancestor=$1
+    while (! test $ancestor = $target) {
+        if (test -L $ancestor)
+            fail 'Symlink directory:' $ancestor
+        if (test -e $ancestor && ! test -d $ancestor)
+            fail 'Not a directory:' $ancestor
+        ancestor=`{dirname $ancestor}
+    }
+}
+
+# Check all conflicts before creating links.
+steps=$action
+if (~ $action install)
+    steps=(check install)
+for (step in $steps) {
+    for (entry in $entries) {
+        file=`{printf '%s\n' $entry | cut -d / -f 2-}
+        source=$repo/$entry
+        dest=$target/$file
+        parent=`{dirname $dest}
+        checkparents $parent
+        current=''
+        if (test -L $dest)
+            current=`{cleanname -d $parent `{readlink $dest}}
+        if (test $current = $source) {
+            if (~ $step uninstall) {
+                rm $dest || fail 'Cannot remove:' $dest
+                echo Removed $dest
+            }
+        }
+        if not if (! ~ $step uninstall) {
+            if (test -e $dest || test -L $dest)
+                fail 'Conflict:' $dest
+            if (~ $step install) {
+                mkdir -p $parent || fail 'Cannot create directory:' $parent
+                ln -s $source $dest || fail 'Cannot link:' $dest
+            }
+            echo $step $dest '->' $source
+        }
+    }
+}
+
+exit ''

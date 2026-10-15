@@ -1,0 +1,12 @@
+[
+  {
+    "target": "/home/aw/.config/havoc/havoc.cfg",
+    "prepared": "havoc.cfg",
+    "original_sha256": "04733ff4787b47df7a4cef84c9df8eafb1018193b03758f03e0e8d5cfa13db58"
+  },
+  {
+    "target": "/home/aw/.config/swindle/config.lua",
+    "prepared": "swindle-config.lua",
+    "original_sha256": "17edc6b4a1bdabfdf49d36a8c94bc4436d42a4fc64d1fb23e171dee58d7e273f"
+  }
+]

@@ -1,0 +1,34 @@
+#!/usr/bin/env oksh
+
+# Select the current position
+printf '%s\n' 'addr=dot' | 9p write "acme/$winid/ctl"
+
+# Mark the current line
+printf '%s' '__MARKER__' | 9p write "acme/$winid/data"
+printf '%s' '/^.*__MARKER__/' | 9p write "acme/$winid/addr"
+
+# Process the line
+line=$(9p read "acme/$winid/data" | sed '1q')
+
+indentation=$(printf '%s\n' "$line" |
+    sed 's/^\(	*\).*$/\1/')
+
+before_marker=$(printf '%s\n' "$line" |
+    sed 's/b\{0,1\}__MARKER__.*$/{/')
+
+after_marker=$(printf '%s\n' "$line" |
+    awk -F'__MARKER__' '{print $2}')
+
+[ "$after_marker" = "b" ] && after_marker=""
+
+# Compose the final block
+block=$(printf '%s\n%s\t\n%s}%s' \
+    "$before_marker" "$indentation" \
+    "$indentation" "$after_marker")
+
+# Replace the original line
+printf '%s' '/^.*__MARKER__.*\n?/' |
+    9p write "acme/$winid/addr"
+
+printf '%s\n' "$block" |
+    9p write "acme/$winid/data"
