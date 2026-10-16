@@ -1,6 +1,6 @@
 # Dotfiles
 
-Plan 9 rc + Make. No Stow or Python.
+Plan 9 rc + Make.
 Requires `rc`, `cleanname` (from plan9port), Make, and standard Unix utilities.
 
 ## Install
@@ -33,7 +33,7 @@ make install PACKAGES=foot
 ```
 
 New packages are discovered automatically. No script changes needed.
-Edit files in the repository or through their links; both edit the same file.
+Edit files in the repository or through their links, both edit the same file.
 
 ## Options
 
