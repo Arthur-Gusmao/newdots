@@ -1,0 +1,97 @@
+#!/bin/sh
+
+# Validate arguments
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    printf 'Usage: %s <domain> <wordlist> [workers]\n' "$0" >&2
+    exit 1
+fi
+
+domain=${1%.}
+wordlist=$2
+workers=${3:-32}
+
+case "$workers" in
+    ''|*[!0-9]*|0)
+        printf 'Error: Invalid worker count\n' >&2
+        exit 1
+        ;;
+esac
+
+if [ "$workers" -gt 128 ] 2>/dev/null; then
+    printf 'Error: Maximum worker count is 128\n' >&2
+    exit 1
+fi
+
+if [ ! -r "$wordlist" ]; then
+    printf 'Error: Cannot read wordlist\n' >&2
+    exit 1
+fi
+
+if ! command -v host >/dev/null 2>&1; then
+    printf 'Error: host command not found\n' >&2
+    exit 1
+fi
+
+export LC_ALL=C
+
+printf '[*] Target: %s\n' "$domain"
+printf '[*] Workers: %s\n' "$workers"
+printf '[*] Starting enumeration...\n'
+
+# Stream, validate and deduplicate candidates
+awk -v domain="$domain" '
+{
+    sub(/\r$/, "", $0)
+    name = tolower($0)
+
+    if (length(name) < 1 || length(name) > 63)
+        next
+
+    if (name !~ /^[a-z0-9-]+$/)
+        next
+
+    if (name ~ /^-/ || name ~ /-$/)
+        next
+
+    if (seen[name]++)
+        next
+
+    print name "." domain
+}' < "$wordlist" |
+
+# Run concurrent DNS queries without a shell wrapper
+xargs -r -P "$workers" -n 1 \
+    host -W 1 -R 1 -t A 2>/dev/null |
+
+# Parse and deduplicate DNS results
+awk -v domain="$domain" '
+BEGIN {
+    suffix = "." tolower(domain)
+}
+{
+    name = tolower($1)
+    sub(/\.$/, "", name)
+
+    len = length(name)
+    slen = length(suffix)
+
+    if (len <= slen)
+        next
+
+    if (substr(name, len - slen + 1) != suffix)
+        next
+
+    if (($2 == "has" && $3 == "address") ||
+        ($2 == "is" && $3 == "an" &&
+         $4 == "alias" && $5 == "for")) {
+
+        if (!seen[name]++) {
+            printf "[+] %s\n", name
+            fflush()
+        }
+    }
+}'
+
+printf '[*] Enumeration finished\n'
+
+
